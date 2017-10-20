@@ -236,7 +236,7 @@ namespace BraveHaxvius
         }
         public void SellUnits()
         {
-            UnfavoriteAll();
+            //UnfavoriteAll();
             var distinctUnits = Units.Select(u => u.Name).Distinct();
             var du2 = distinctUnits.Select(u => Units.First(uu => uu.Name == u).UniqueUnitId);
             var favorites = GetUserInfo[GameObject.UserUnitFavorite_1k3IefTc][0][Variable.UniqueUnitId].ToString();
@@ -248,8 +248,8 @@ namespace BraveHaxvius
                     continue;
                 if (unit.Name.Contains("Trust") || unit.Name.Contains("Snapper") || unit.Level != "1" || unit.Rarity == "1" || unit.Rarity == "2" || unit.Rarity == "5" || unit.Rarity == "6")
                     continue;
-                //if (favorites.Contains(unit.UniqueUnitId))
-                //    continue;
+                if (favorites.Contains(unit.UniqueUnitId))
+                    continue;
                 if (du2.Contains(unit.UniqueUnitId))
                     continue;
                 var sellCost = 800;
@@ -370,7 +370,7 @@ namespace BraveHaxvius
                                 new JProperty(Variable.UnitSellPrice, totalSell),
                                 new JProperty(Variable.UnitSellIds, string.Join(",", unitSellList))))));
         }
-        public void UnitHunter(Unit unit, Func<int, int> status = null)
+        public void UnitHunter(Unit unit, Boolean fuseUnits = true, Boolean sellUnits = false, Func<int, int> status = null)
         {
             var Gachas = GetUserInfo[GameObject.GachaScheduleMst];
             var Gacha10_1 = Gachas.First(g => g[Variable.Description].ToString().Contains("10+1"));
@@ -378,42 +378,60 @@ namespace BraveHaxvius
             var sell4Star = !GetUserInfo[GameObject.UserOptionInfo].First()[Variable.OptionValue].ToString().Contains("4");
             var newUnits = new List<Unit>();
             int iteration = 0;
-            while (newUnits.Count(u => u.UnitId == unit.BaseUnitId) == 0)
+            while (newUnits.Count(u => u.UnitId == unit.BaseUnitId) < 1)
             {
-                newUnits.Clear();
+                //newUnits.Clear();
                 DoMission(Mission.AirshipDeck, false, "20:" + Item.SummonTicket.ItemId + ":9");
                 for (int j = 0; j < 9; j++)
                 {
                     status?.Invoke(iteration++);
                     newUnits.AddRange(Summon(Gacha10_1[Variable.GachaId].ToString(), Gacha10_1[Variable.Options].ToString(), "1", "0"));
                     Thread.Sleep(5000);
+
+                    var distinct = newUnits.Where(u => u.Rarity == "5").Select(a => a.Name).Distinct();
+                    Logger.Out($"Total summonned: {newUnits.Count()}");
+                    foreach (var d in distinct)
+                        Logger.Out($"{d}: {newUnits.Count(a => a.Name == d)}");
+
                     if (newUnits.Count(u => u.UnitId == unit.BaseUnitId) > 0)
                         break;
                 }
-                var unitSellList = new List<String>();
-                var totalSell = 0;
-                if (!sell3Star)
-                    continue;
-                newUnits.ForEach(u =>
+
+                if (fuseUnits)
                 {
-                    var sellCost = 800;
-                    if (u.Rarity == "4")
+                    FuseUnits();
+                }
+
+                if (sellUnits)
+                {
+                    SellUnits();
+
+                    var unitSellList = new List<String>();
+                    var totalSell = 0;
+                    if (!sell3Star)
+                        continue;
+                    newUnits.ForEach(u =>
                     {
-                        sellCost = 1500;
-                        if (!sell4Star)
+                        var sellCost = 800;
+                        if (u.Rarity == "4")
+                        {
+                            sellCost = 1500;
+                            if (!sell4Star)
+                                return;
+                        }
+                        if (u.Rarity == "5")
                             return;
-                    }
-                    if (u.Rarity == "5")
-                        return;
-                    totalSell += sellCost;
-                    unitSellList.Add(u.UniqueUnitId);
-                });
-                Network.SendPacket(Request.UnitSell,
-                    new JProperty(GameObject.UnitSell,
-                        new JArray(
-                            new JObject(
-                                new JProperty(Variable.UnitSellPrice, totalSell),
-                                new JProperty(Variable.UnitSellIds, string.Join(",", unitSellList))))));
+                        totalSell += sellCost;
+                        unitSellList.Add(u.UniqueUnitId);
+                    });
+                    Network.SendPacket(Request.UnitSell,
+                        new JProperty(GameObject.UnitSell,
+                            new JArray(
+                                new JObject(
+                                    new JProperty(Variable.UnitSellPrice, totalSell),
+                                    new JProperty(Variable.UnitSellIds, string.Join(",", unitSellList))))));
+                }
+
                 Thread.Sleep(3000);
             }
         }

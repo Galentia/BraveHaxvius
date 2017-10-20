@@ -122,7 +122,7 @@ namespace Client
                     ProxyPort = !String.IsNullOrEmpty(ProxyIP.Text.Replace(" ", "")) ? Int32.Parse(ProxyIP.Text.Replace(" ", "")) : 0
                 };
                 b.Login();
-                b.UnitHunter(unit, iteration);
+                b.UnitHunter(unit, status: iteration);
                 summonButton.Text = "summon highlighted";
                 summonButton.Enabled = true;
             });
