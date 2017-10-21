@@ -441,11 +441,19 @@ namespace BraveHaxvius
 
             var favorites = GetUserInfo[GameObject.UserUnitFavorite_1k3IefTc][0][Variable.UniqueUnitId].ToString();
             var expeditionUnits = String.Join(",", GetUserInfo[GameObject.sgExpdQuestInfo].Select(n => n["7mA422N6"].ToString()).ToList());
-            foreach (var unit in Units)
+     
+            for (var i = Units.Count - 1; i > 0; i--)
             {
+                if(i > (Units.Count - 1))
+                {
+                    i = Units.Count - 1;
+                }
+
+                var unit = Units[i];
+
                 if (unit.Name.Contains(" Pot") || unit.Name.Contains("tuar"))
                     continue;
-                if (!favorites.Contains(unit.UniqueUnitId))
+                if (favorites.Contains(unit.UniqueUnitId))
                     continue;
                 if (expeditionUnits.Contains(unit.UniqueUnitId))
                     continue;
@@ -456,18 +464,22 @@ namespace BraveHaxvius
                 var fuseExperience = 1500;
                 if (int.Parse(unit.Rarity) == 4)
                     fuseExperience = 2500;
-                var unitsToFuse = Units.FindAll(u => u.BaseUnitId == unit.BaseUnitId && u.UniqueUnitId != unit.UniqueUnitId && !favorites.Contains(u.UniqueUnitId) && u.Level != "0");
+                var unitsToFuse = Units.FindAll(u => u.BaseUnitId == unit.BaseUnitId && u.UniqueUnitId != unit.UniqueUnitId && !favorites.Contains(u.UniqueUnitId) && u.Level == "1" );
                 var remainingTmr = 104.9f - Single.Parse(unit.Tmr);
                 var remainingUnits = (UInt16)Math.Min(remainingTmr / 5.0f, 5.0f);
                 var unitShortList = unitsToFuse.Take(remainingUnits).ToList();
                 unitsToFuse = unitsToFuse.Skip(remainingUnits).ToList();
-                if (unitShortList.Count() > 0)
-                    Logger.Out("fusing : " + unit.Name + " x" + unitShortList.Count);
-                while (unitShortList.Count() == 5)
+
+                while (unitShortList.Count() > 0)
                 {
+                    Logger.Out("fusing : " + unit.Name + " x" + unitShortList.Count);
                     var fuseList = new List<String>();
                     foreach (var fuseUnit in unitShortList)
+                    {
                         fuseList.Add(fuseUnit.UniqueUnitId);
+                        Units.Remove(fuseUnit);
+                    }
+
                     var UnitMix = Network.SendPacket(Request.UnitMix,
                         new JProperty(GameObject.UnitMix,
                             new JArray(
@@ -478,7 +490,7 @@ namespace BraveHaxvius
                                     new JProperty(Variable.Experience, (fuseExperience * unitShortList.Count()).ToString()),
                                     new JProperty("UDMIFB72", "0")))));
                     Thread.Sleep(3000);
-                    Units.FindAll(u => fuseList.Contains(u.UniqueUnitId)).ForEach(u => u.Level = "0");
+                    //Units.FindAll(u => fuseList.Contains(u.UniqueUnitId)).ForEach(u => u.Level = "0");
                     unit.Tmr = (Single.Parse(unit.Tmr) + 5 * unitShortList.Count()).ToString();
                     remainingTmr = 104.9f - Single.Parse(unit.Tmr);
                     remainingUnits = (UInt16)Math.Min(remainingTmr / 5.0f, 5.0f);
